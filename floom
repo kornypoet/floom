@@ -1,0 +1,130 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'open3'
+require 'json'
+# require 'hanuman'
+require './flume_client'
+
+options = OpenStruct.new
+OptionParser.new do |opts|
+  
+  opts.banner = <<EOS
+Usage: floom <command> [options...]
+
+Commands include:
+    config                           Displays the current flume configuration
+    mapping                          Displays the current flume physical to logical node mapping
+    status                           Displays the status of the flume nodes the master knows about
+    report                           Displays the master reports
+
+Options include:
+EOS
+
+  options.master = 'localhost'
+  options.pretty = false
+  options.usage  = opts
+
+  opts.on('-m', '--master HOSTNAME', 'Connect to the flume master on HOSTNAME', 'Defaults to localhost') do |hostname|
+    options.master = hostname
+  end
+
+  opts.on('-p', '--pretty', 'Display JSON pretty formatted results', 'Defaults to raw formatted results') do 
+    options.pretty = true
+  end
+
+  opts.on('-h', '--help', 'Display this screen and exit'){ puts opts ; exit }
+end.parse!
+
+commands  = ARGV
+available = { 
+  'config'  => 'getconfigs',
+  'mapping' => 'getmappings',
+  'status'  => 'getnodestatus',
+  'report'  => 'getreports' 
+}
+client = Hanuman::FlumeClient.new options.master
+
+puts "Warning! Flume node process not detected." unless client.process_running? "Node"
+
+unless available[commands.first]
+  puts "invalid command: #{commands.first}", options.usage
+else
+  if options.pretty == true
+    puts JSON.pretty_generate client.send(commands.first.to_sym) 
+  else
+    puts client.shell_response(available[commands.first]) 
+  end
+end
+
+module Floom
+  class Client
+
+    java_import 'com.cloudera.flume.util.AdminRPCThrift'
+    
+    def initialize(host = 'localhost', port = 35873)
+      begin
+        @connection = Java::ComClouderaFlumeUtil::AdminRPCThrift.new(host, port)
+      rescue NativeException
+        puts "oh shit"
+      end
+    end
+    
+    def process_running? proc
+      !%x[ ps aux | grep "[F]lume#{proc}" ].strip.empty?
+    end
+    
+    def shell_response cmd
+      Open3.popen3('flume','shell','-c',master,'-e',cmd){ |stdin, stdout, stderr, thread| stdout.read }
+    end
+    
+    def config
+      return @config if @config
+      response = shell_response "getconfigs"
+      trimmed  = response.split(/SOURCE\s+SINK\s+/)[1..-1].map{ |s| s.split(/\n/) }.flatten.compact_blank
+      logical  = trimmed.inject([]) do |ary,str| 
+        vals   = str.split(/\s/).compact_blank.map(&:strip)
+        ary << { vals.shift => { :flow => vals.shift, :source => vals.shift, :sink => vals.shift } }
+      end
+      @config = { :logical_nodes => logical }
+    end
+    
+    def status
+      return @status if @status
+      response = shell_response "getnodestatus"
+      trimmed  = response.split(/\d+\s+nodes\s+/)[1..-1].map{ |s| s.split(/\n/) }.flatten.compact_blank
+      logical  = trimmed.inject([]) do |ary,str|
+        vals   = str.split(/-->/).map(&:strip)
+        ary << { vals.shift => { :status => vals.shift.downcase.to_sym } }
+      end
+      @status ={ :logical_nodes => logical }
+    end
+    
+    def mapping
+      return @mapping if @mapping
+      response = shell_response "getmappings"
+      trimmed  = response.split(/Logical Node\(s\)\s+/)[1..-1].map{ |s| s.split(/\n/) }.flatten.compact_blank
+      physical = trimmed.inject([]) do |ary,str|
+        vals   = str.split(/-->/).map(&:strip)
+        ary << { vals.shift => { :logical_nodes => vals.shift[1..-2].split(',') } }
+      end
+      @mapping = { :physical_nodes => physical }
+    end
+    
+    def report
+      return @report if @report
+      response = shell_response "getreports"
+      trimmed  = response.split(/\d+\s+reports\s+/)[1..-1].map{ |s| s.split(/\n/) }.flatten.compact_blank
+      reports  = trimmed.inject({}) do |hsh,str|
+        vals   = str.split(/-->/).map(&:strip)
+        ary << { vals.shift => { "ThriftFlumeReport" => vals.shift.match(/ThriftFlumeReport\((.*)\)/).captures.first } }
+      end
+      @report = { :reports => reports }
+    end
+    
+    def refresh!
+      @config = @node = @mapping = @report = nil
+    end
+    
+  end
+end
+
