@@ -1,54 +1,33 @@
 module Floom
   class Client
 
-    def self.create(type, options = {})
-      
-    end
+    attr_reader :connection
 
     def initialize(options = {})
-      @port        = options[:port]
-      @host        = options[:host]
-      thrift_class = lookup_thrift_class(options[:type])
-      thrift_client(thrift_class, thrift_protocol(thrift_transport(thrift_socket)))
+      @host = options[:host]
+      @port = options[:port]
+      establish_connection!
     end
     
-    def open
-      thrift_transport.open
+    def to_s
+      "#<#{self.class}:#{object_id} host:#{@host} port:#{@port}>"
+    end
+
+    def reset_connection!
+      @socket = @transport = @protocol = @connection = nil
+      establish_connection!
     end
 
   private
-
-    def lookup_thrift_class(key)
-      {
-        master: FlumeMasterAdminServer::Client,        
-        report: ThriftFlumeReportServer::Client
-      }.fetch(key)
-    end
-
-    def thrift_socket(host, port)
-      @socket    ||= Thrift::Socket.new(host, port)
-    end
-
-    def thrift_transport(socket)
-      @transport ||= Thrift::BufferedTransport.new(socket)
-    end
-
-    def thrift_protocol
-      @protocol  ||= Thrift::BinaryProtocol.new(transport)      
-    end
     
-    def thrift_client(thrift_klass, protocol)
-      @client    ||= thrift_klass.new(protocol)
+    def establish_connection!
+      @socket     ||= Thrift::Socket.new(@host, @port)
+      @transport  ||= Thrift::BufferedTransport.new(@socket)
+      @protocol   ||= Thrift::BinaryProtocol.new(@transport)      
+      @connection ||= self.class.thrift_class.new(@protocol)
+      @transport.open
+      self
     end
 
   end
-  
-  class Master < Client
-    
-  end
-
-  class Reporter < Client
-
-  end
-
 end
