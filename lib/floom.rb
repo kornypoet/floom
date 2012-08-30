@@ -11,6 +11,7 @@ require 'thrift/thrift_flume_report_server'
 
 require 'floom/configuration'
 require 'floom/status'
+require 'floom/report'
 require 'floom/request'
 require 'floom/client'
 require 'floom/client/master'
