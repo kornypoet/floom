@@ -16,7 +16,7 @@ module Floom
     end
 
     def logical_nodes
-      (configurations.keys + mappings.keys).uniq
+      (configurations.keys + mappings.values + statuses.keys).flatten.uniq
     end
 
     def physical_nodes
