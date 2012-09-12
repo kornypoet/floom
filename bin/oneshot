@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+conf        = ARGV.shift
+name        = conf.split(':').first
+validated   = [ conf.match(/:/), 
+                conf.match(/\|/),
+                conf.match(/;/),
+                conf.split(/:/).size > 1, 
+                !conf.match(/[-help]/),
+                ARGV.size > 0 ].all?
+
+help_string = <<HELP
+Usage: floom oneshot '<flume config string>'
+
+Tips:
+
+* Make sure you use single quotes around the config string (')
+
+* Make sure your config begins with a logical node name followed by a colon (:)
+
+* If anything inside the config needs to be quoted, use double quotes (")
+
+* Make sure to end the config with a semicolon (;)
+
+* Flume config strings have the following format:
+    'name: source | decorator decorator ... sink;'
+
+Examples
+  * 'terminal: console | console;'
+  * 'writer: console | text("/tmp/flume_output.txt", raw);'
+  * 'fake_data: asciisynth(1000, 100) | stubbornAppend rpcSink("localhost", 33333);'
+
+HELP
+
+if validated
+  cmd  = "flume node_nowatch -1 -s -n #{name} -c '#{conf}'"
+  system cmd
+else
+  puts help_string
+end

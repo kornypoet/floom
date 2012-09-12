@@ -1,5 +1,0 @@
-#!/usr/bin/env ruby
-conf = ARGV.shift
-name = conf.split(':').first
-cmd  = "flume node_nowatch -1 -s -n #{name} -c '#{conf}'"
-puts cmd ; system cmd
