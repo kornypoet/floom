@@ -1,0 +1,3 @@
+module Floom
+  VERSION = '0.0.1'
+end
