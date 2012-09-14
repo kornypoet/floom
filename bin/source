@@ -3,6 +3,10 @@ require 'java'
 require 'socket'
 require 'configliere' ; Settings.use(:commandline)
 
+Setting.usage = <<HELP
+Usage: floom source [options]
+
+HELP
 Settings.define :flume_home, :default     => ENV['FLUME_HOME'],  
                              :required    => true, 
                              :description => 'Set to the top-level directory of your Flume install'
