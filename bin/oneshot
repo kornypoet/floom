@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
 
 conf        = ARGV.shift
-name        = conf.split(':').first
-validated   = [ conf.match(/:/), 
+validations = [ !conf.nil?,
+                conf.match(/:/), 
                 conf.match(/\|/),
                 conf.match(/;/),
                 conf.split(/:/).size > 1, 
-                !conf.match(/[-help]/),
-                ARGV.size > 0 ].all?
+                !conf.match(/-help/),
+                ARGV.size == 0 ]
 
 help_string = <<HELP
 Usage: floom oneshot '<flume config string>'
@@ -32,7 +32,8 @@ Examples
 
 HELP
 
-if validated
+if validations.all?
+  name = conf.split(':').first
   cmd  = "flume node_nowatch -1 -s -n #{name} -c '#{conf}'"
   system cmd
 else

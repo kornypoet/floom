@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'pathname'
-decorator = Pathname(ARGV[0]).realpath
-flow_name = decorator.basename('.rb').to_s
-flow      = "#{flow_name}: console | wukongDecorator(\"#{decorator.to_s}\") console;"
-system('flume', 'node_nowatch', '-1', '-s', '-n', flow_name, '-c', flow)
-

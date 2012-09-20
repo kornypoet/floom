@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+require 'pathname'
+
+decorator = Pathname(ARGV[0]).realpath rescue nil
+
+help_string = <<HELP
+Usage: floom debug <decorator file>
+
+Launches 'decorator-debug: console | wukongDecorator("/path/to/decorator") console;'
+
+HELP
+
+if decorator.nil?
+  puts help_string
+else
+  flow_name = decorator.basename('.rb').to_s
+  flow      = "#{flow_name}-debug: console | wukongDecorator(\"#{decorator.to_s}\") console;"
+  system('flume', 'node_nowatch', '-1', '-s', '-n', flow_name, '-c', flow)
+end
