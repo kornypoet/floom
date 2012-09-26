@@ -9,10 +9,10 @@ module Floom
 
     end
     
-    def initialize(options = {})
-      @metrics = options
+    def initialize(report = {})
+      @metrics = report
     end
-
+    
     def to_hash
       @metrics.dup
     end
