@@ -16,7 +16,7 @@ Flume extra fun: Floom
 DESC
 
   s.files         = `git ls-files`.split("\n")
-  s.executables   = 'bin/floom'
+  s.executables   = 'floom'
   s.require_paths = ['lib']
   s.add_dependency('thrift', '>= 0.8.0')
   
